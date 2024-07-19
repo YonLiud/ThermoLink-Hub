@@ -6,6 +6,14 @@
 #define RESET_PIN 14
 #define DIO0_PIN 2
 
+void parsePacket(byte packet[]);
+
+struct Packet {
+    uint8_t SOP;          // Start of Packet (1 byte)
+    uint8_t identifier;   // Identifier (1 byte)
+    uint16_t randomNumber; // Random Number (2 bytes)
+    float temperature;    // Temperature (4 bytes)
+};
 
 void setup() {
   Serial.begin(115200);
@@ -15,26 +23,39 @@ void setup() {
     Serial.println("LoRa FAIL!");
     while (1);
   }
-  LoRa.setSyncWord(0xA5);
+  LoRa.setSyncWord(0xA5); 
   LoRa.setGain(6);
   Serial.println("LoRa OK!");
 }
 
 void loop() {
   int packetSize = LoRa.parsePacket();
-  if (packetSize) {
-
+  if (packetSize == sizeof(Packet)) {
     // Received a packet
-    Serial.print("Received packet '");
+    Serial.println("");
+    Serial.println("Received packet OK!");
 
-    // Read packet
-    while (LoRa.available()) {
-      Serial.print((char)LoRa.read());
+    Packet packet;
+    LoRa.readBytes((uint8_t*)&packet, sizeof(packet));
+
+    // Verify SOP
+    if (packet.SOP != 0x7E) {
+      Serial.println("Invalid SOP");
+      return;
     }
 
-    // Print RSSI of packet
-    Serial.print("' with RSSI ");
-    Serial.println(LoRa.packetRssi());
+    packet.temperature = packet.temperature / 100.0;
+
+    Serial.println("");
+    Serial.print("ID: ");
+    Serial.print(packet.identifier, HEX);
+    Serial.print(" - Random Number: ");
+    Serial.print(packet.randomNumber, HEX);
+    Serial.print(" - Temperature: ");
+    Serial.print(packet.temperature);
+    // RSSI
+    Serial.print(" / RSSI: ");
+    Serial.print(LoRa.packetRssi());
   }
 
   delay(100);
