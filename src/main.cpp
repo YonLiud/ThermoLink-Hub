@@ -49,7 +49,6 @@ void setup() {
   Serial.println("SSD1306 OK!");
 
   Serial.println("Displaying splash screen...");
-  delay(2000);
   display.display();
   display.setTextColor(WHITE);
   display.setTextSize(1);
@@ -69,8 +68,6 @@ void setup() {
   LoRa.setGain(6);
   Serial.println("LoRa OK!");
   display.println("LoRa OK!");
-
-  display.println("Unconfigured loop method for SSD1306 :)");
 
   display.display();
 }
