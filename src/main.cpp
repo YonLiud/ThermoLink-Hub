@@ -1,10 +1,28 @@
 #include <Arduino.h>
 #include <LoRa.h>
 #include <SPI.h>
+#include <Adafruit_SSD1306.h>
+#include <Wire.h>
+#include <Adafruit_GFX.h>
 
-#define SLAVE_SELECT_PIN 5
-#define RESET_PIN 14
+// SPI Pin Definition
+#define MASTERINSLAVEOUT_PIN 15
 #define DIO0_PIN 2
+#define SCK_PIN 4
+#define MASTEROUTSLAVEIN_PIN 16
+#define RESET_PIN 17
+#define SLAVESELECT_PIN 5
+
+// I2C Pin Definition
+#define SDA_PIN 21
+#define SCL_PIN 19
+
+// OLED Display
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+#define OLED_RESET -1
+
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 void parsePacket(byte packet[]);
 
@@ -17,15 +35,44 @@ struct Packet {
 
 void setup() {
   Serial.begin(115200);
+  
+  Wire.begin(SDA_PIN, SCL_PIN);
+  Serial.println("Wire OK!");
 
-  LoRa.setPins(SLAVE_SELECT_PIN, RESET_PIN, DIO0_PIN); // Initialize LoRa with the pins
+  SPI.begin(SCK_PIN, MASTERINSLAVEOUT_PIN, MASTEROUTSLAVEIN_PIN, SLAVESELECT_PIN);
+  Serial.println("SPI OK!");
+
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+    Serial.println(F("SSD1306 allocation FAIL!"));
+    for (;;);
+  }
+  Serial.println("SSD1306 OK!");
+
+  Serial.println("Displaying splash screen...");
+  delay(2000);
+  display.display();
+  display.setTextColor(WHITE);
+  display.setTextSize(1);
+  display.setCursor(0, 0);
+  display.println("SSD1306 OK!");
+  display.display();
+  
+
+  LoRa.setPins(SLAVESELECT_PIN, RESET_PIN, DIO0_PIN); // Initialize LoRa with the pins
   if (!LoRa.begin(433E6)) {
     Serial.println("LoRa FAIL!");
+    display.println("LoRa FAIL!");
+    display.display();
     while (1);
   }
   LoRa.setSyncWord(0xA5); 
   LoRa.setGain(6);
   Serial.println("LoRa OK!");
+  display.println("LoRa OK!");
+
+  display.println("Unconfigured loop method for SSD1306 :)");
+
+  display.display();
 }
 
 void loop() {
@@ -45,8 +92,6 @@ void loop() {
     }
 
     packet.temperature = packet.temperature / 100.0;
-
-    Serial.println("");
     Serial.print("ID: ");
     Serial.print(packet.identifier, HEX);
     Serial.print(" - Random Number: ");
@@ -55,7 +100,21 @@ void loop() {
     Serial.print(packet.temperature);
     // RSSI
     Serial.print(" / RSSI: ");
-    Serial.print(LoRa.packetRssi());
+    Serial.println(LoRa.packetRssi());
+
+    display.clearDisplay();
+    display.setCursor(0, 0);
+    display.println("Received packet OK!");
+    display.print("ID: ");
+    display.println(packet.identifier, HEX);
+    display.print("Random Number: ");
+    display.println(packet.randomNumber, HEX);
+    display.print("Temperature: ");
+    display.println(packet.temperature);
+    display.print("RSSI: ");
+    display.println(LoRa.packetRssi());
+    display.display();
+
   }
 
   delay(100);
